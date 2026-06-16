@@ -1,6 +1,13 @@
 'use strict';
 
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Las columnas DATE (sale_date, expense_date) deben volver como texto
+// 'YYYY-MM-DD', no como objeto Date (que el driver convierte a UTC y al
+// serializarse a JSON queda como timestamp ISO completo). Devolver el string
+// crudo evita desfases de zona horaria y que el cliente reciba fechas que
+// rompen el formateo. OID 1082 = DATE.
+types.setTypeParser(1082, (v) => v);
 
 const connectionString = process.env.DATABASE_URL;
 

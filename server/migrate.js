@@ -12,7 +12,7 @@ const BUSINESS_UNITS = [
 ];
 
 // Conceptos de gasto fijos típicos sembrados para cada tienda física.
-const DEFAULT_FIXED_CATEGORIES = ['Alquiler', 'Naturgy (luz)', 'Wifi / Internet', 'Municipio / Impuestos'];
+const DEFAULT_FIXED_CATEGORIES = ['Salario', 'Alquiler', 'Naturgy (luz)', 'Wifi / Internet', 'Municipio / Impuestos'];
 
 // Conceptos de gastos generales / comunes (business_unit_id = NULL).
 const DEFAULT_GENERAL_CATEGORIES = ['Compra a proveedor', 'Honorarios contadora', 'Tasas e impuestos sociedad'];

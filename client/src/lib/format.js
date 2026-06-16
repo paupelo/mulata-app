@@ -22,7 +22,9 @@ export function moneyShort(n) {
 const dateFmt = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 export function formatDate(iso) {
   if (!iso) return '';
-  const d = new Date(iso + 'T00:00:00');
+  // Acepta tanto 'YYYY-MM-DD' como timestamps ISO completos: usa solo la fecha.
+  const d = new Date(String(iso).slice(0, 10) + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
   return dateFmt.format(d);
 }
 
