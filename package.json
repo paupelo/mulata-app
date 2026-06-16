@@ -11,7 +11,7 @@
     "dev:server": "nodemon server/index.js",
     "dev:client": "npm --prefix client run dev",
     "dev": "concurrently -n server,client -c blue,magenta \"npm run dev:server\" \"npm run dev:client\"",
-    "install:client": "npm --prefix client install",
+    "install:client": "npm --prefix client install --include=dev",
     "build": "npm run install:client && npm --prefix client run build",
     "start": "node server/index.js",
     "backup": "node server/backup.js",
