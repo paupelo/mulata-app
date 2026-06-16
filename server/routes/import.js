@@ -10,6 +10,7 @@ const XLSX = require('xlsx');
 
 const { query } = require('../db');
 const { insertSale, insertExpense, findOrCreateClient } = require('../repository');
+const { norm, saleKey, expenseKey, loadSaleKeys, loadExpenseKeys } = require('../dedupe');
 
 const router = express.Router();
 
@@ -26,14 +27,8 @@ const SHEETS = ['VENTAS_TIENDA', 'VENTAS_DISTRIBUCION', 'GASTOS_TIENDA', 'GASTOS
 // Helpers de parseo robusto
 // ---------------------------------------------------------------------------
 
-/** Normaliza un texto: sin acentos, sin espacios sobrantes, minúsculas. */
-function norm(s) {
-  return String(s == null ? '' : s)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-    .toLowerCase();
-}
+// `norm` (normalización de texto) y las claves de duplicados se importan de
+// ../dedupe para compartir la misma lógica con la entrada rápida masiva.
 
 // Texto de tienda del Excel -> code interno de unidad de negocio.
 const STORE_TEXT_TO_CODE = {
@@ -110,11 +105,6 @@ function parseAmount(v) {
   return isFinite(n) ? n : NaN;
 }
 
-/** Clave canónica para detectar duplicados (importe a 2 decimales, texto normalizado). */
-function amtKey(n) {
-  return Number(n).toFixed(2);
-}
-
 /**
  * Lee una hoja como matriz de filas conservando el número de fila real de Excel.
  * Devuelve { colIndex(name), rows: [{ excelRow, cells }] } o null si no existe.
@@ -173,24 +163,8 @@ router.post('/excel', upload.single('file'), async (req, res, next) => {
     }
 
     // Sets de claves existentes para anti-duplicados.
-    const saleKeys = new Set(); // `${date}|${unit}|${client}|${amount}`
-    {
-      const { rows } = await query(
-        `SELECT to_char(sale_date,'YYYY-MM-DD') AS d, business_unit_id, client_id, amount::float8 AS amount FROM sales;`
-      );
-      for (const r of rows) {
-        saleKeys.add(`${r.d}|${r.business_unit_id}|${r.client_id ?? ''}|${amtKey(r.amount)}`);
-      }
-    }
-    const expenseKeys = new Set(); // `${date}|${unit}|${amount}|${conceptNorm}`
-    {
-      const { rows } = await query(
-        `SELECT to_char(expense_date,'YYYY-MM-DD') AS d, business_unit_id, amount::float8 AS amount, concept FROM expenses;`
-      );
-      for (const r of rows) {
-        expenseKeys.add(`${r.d}|${r.business_unit_id ?? ''}|${amtKey(r.amount)}|${norm(r.concept)}`);
-      }
-    }
+    const saleKeys = await loadSaleKeys();
+    const expenseKeys = await loadExpenseKeys();
 
     const summary = {};
     const errors = [];
@@ -220,7 +194,7 @@ router.post('/excel', upload.single('file'), async (req, res, next) => {
       if (!(amount >= 0)) return addError(sheet, excelRow, `Importe inválido: "${importeRaw}".`);
 
       const unitId = unitIdByCode[code];
-      const key = `${date}|${unitId}|${''}|${amtKey(amount)}`;
+      const key = saleKey({ sale_date: date, business_unit_id: unitId, client_id: null, amount });
       if (saleKeys.has(key)) {
         summary[sheet].skipped += 1;
         return;
@@ -260,7 +234,7 @@ router.post('/excel', upload.single('file'), async (req, res, next) => {
         clientsByName.set(norm(clienteName), id);
       }
 
-      const key = `${date}|${distId}|${clientId}|${amtKey(amount)}`;
+      const key = saleKey({ sale_date: date, business_unit_id: distId, client_id: clientId, amount });
       if (saleKeys.has(key)) {
         summary[sheet].skipped += 1;
         return;
@@ -301,7 +275,7 @@ router.post('/excel', upload.single('file'), async (req, res, next) => {
 
       const conceptVal = concepto != null && String(concepto).trim() !== '' ? String(concepto).trim() : null;
       const unitId = unitIdByCode[code];
-      const key = `${date}|${unitId}|${amtKey(amount)}|${norm(conceptVal)}`;
+      const key = expenseKey({ expense_date: date, business_unit_id: unitId, amount, concept: conceptVal });
       if (expenseKeys.has(key)) {
         summary[sheet].skipped += 1;
         return;
@@ -334,7 +308,7 @@ router.post('/excel', upload.single('file'), async (req, res, next) => {
       if (!(amount >= 0)) return addError(sheet, excelRow, `Importe inválido: "${importeRaw}".`);
 
       const conceptVal = concepto != null && String(concepto).trim() !== '' ? String(concepto).trim() : null;
-      const key = `${date}|${''}|${amtKey(amount)}|${norm(conceptVal)}`;
+      const key = expenseKey({ expense_date: date, business_unit_id: null, amount, concept: conceptVal });
       if (expenseKeys.has(key)) {
         summary[sheet].skipped += 1;
         return;

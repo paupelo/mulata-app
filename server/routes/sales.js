@@ -3,6 +3,7 @@
 const express = require('express');
 const { query } = require('../db');
 const { insertSale } = require('../repository');
+const { saleKey, loadSaleKeys } = require('../dedupe');
 
 const router = express.Router();
 
@@ -71,6 +72,71 @@ router.post('/', async (req, res, next) => {
       note: note || null,
     });
     res.status(201).json({ id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/sales/bulk — entrada rápida de varias ventas a la vez.
+ * Body: { rows: [{ unit_code|business_unit_id, sale_date, amount, note?, client_id? }, ...] }
+ * Reutiliza insertSale (misma vía que la individual) y el mismo anti-duplicados
+ * que el importador: omite filas que ya existan (fecha+unidad/cliente+importe).
+ * Devuelve { inserted, skipped, empty, errors:[{index,reason}] }.
+ */
+router.post('/bulk', async (req, res, next) => {
+  try {
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'No hay filas para guardar.' });
+    }
+
+    const existing = await loadSaleKeys();
+    let inserted = 0;
+    let skipped = 0;
+    let empty = 0;
+    const errors = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i] || {};
+      try {
+        // Importe vacío => fila vacía (se omite). 0 explícito sí se guarda.
+        if (r.amount === '' || r.amount === null || r.amount === undefined) {
+          empty += 1;
+          continue;
+        }
+        const amount = Number(r.amount);
+        if (!Number.isFinite(amount) || amount < 0) {
+          errors.push({ index: i, reason: 'Importe inválido.' });
+          continue;
+        }
+        const unitId = await resolveUnitId(r);
+        if (!unitId || !r.sale_date) {
+          errors.push({ index: i, reason: 'Faltan unidad o fecha.' });
+          continue;
+        }
+        const client_id = r.client_id ? Number(r.client_id) : null;
+
+        const key = saleKey({ sale_date: r.sale_date, business_unit_id: unitId, client_id, amount });
+        if (existing.has(key)) {
+          skipped += 1;
+          continue;
+        }
+        await insertSale({
+          business_unit_id: unitId,
+          client_id,
+          sale_date: r.sale_date,
+          amount,
+          note: r.note ? String(r.note).trim() : null,
+        });
+        existing.add(key);
+        inserted += 1;
+      } catch (e) {
+        errors.push({ index: i, reason: e.message || 'Error al guardar la fila.' });
+      }
+    }
+
+    res.json({ ok: true, inserted, skipped, empty, errors });
   } catch (err) {
     next(err);
   }

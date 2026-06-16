@@ -8,7 +8,7 @@ import RecordList from '../components/RecordList';
 import EntryForm from '../components/EntryForm';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
-import Fab from '../components/Fab';
+import BulkSalesDistribution from '../components/BulkSalesDistribution';
 
 export default function Distribution() {
   const [preset, setPreset] = useState('this-year');
@@ -22,6 +22,7 @@ export default function Distribution() {
   const [clientModal, setClientModal] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const load = useCallback(async () => {
     const r = qs({ unit: 'distribucion', from: range.from, to: range.to });
@@ -110,6 +111,23 @@ export default function Distribution() {
 
       {/* Facturación registrada */}
       <h2 className="text-lg text-mulata-800 pt-2">Facturación registrada</h2>
+
+      {/* Dos acciones diferenciadas: una factura / entrada rápida del mes */}
+      <div className="flex gap-2">
+        <button
+          className="btn-primary flex-1"
+          onClick={() => {
+            setEditingSale(null);
+            setFormOpen(true);
+          }}
+        >
+          ＋ Añadir facturación
+        </button>
+        <button className="btn-ghost flex-1" onClick={() => setBulkOpen(true)}>
+          ⊞ Añadir varias
+        </button>
+      </div>
+
       <RecordList
         records={sales}
         type="sale"
@@ -121,13 +139,15 @@ export default function Distribution() {
         emptyText="Aún no hay facturación de distribución en este periodo."
       />
 
-      <Fab
-        onClick={() => {
-          setEditingSale(null);
-          setFormOpen(true);
-        }}
-        label="Facturación"
-      />
+      {/* Entrada rápida: facturación del mes para todos los clientes */}
+      <Modal open={bulkOpen} onClose={() => setBulkOpen(false)} title="Añadir varias · Facturación del mes">
+        <BulkSalesDistribution
+          clients={clients}
+          onClose={() => setBulkOpen(false)}
+          onSaved={load}
+          onReload={load}
+        />
+      </Modal>
 
       {/* Alta/edición de facturación */}
       <Modal

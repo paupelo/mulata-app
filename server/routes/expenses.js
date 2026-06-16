@@ -3,6 +3,7 @@
 const express = require('express');
 const { query } = require('../db');
 const { insertExpense } = require('../repository');
+const { expenseKey, loadExpenseKeys } = require('../dedupe');
 
 const router = express.Router();
 
@@ -83,6 +84,74 @@ router.post('/', async (req, res, next) => {
       note: note || null,
     });
     res.status(201).json({ id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/expenses/bulk — entrada rápida de varios gastos a la vez.
+ * Body: { rows: [{ unit_code?|business_unit_id?, category_id?, expense_date, amount,
+ *                  concept?, supplier?, kind?, note? }, ...] }
+ * Sin unidad => gasto general (kind 'general'). Reutiliza insertExpense y el
+ * mismo anti-duplicados que el importador (fecha+unidad+importe+concepto).
+ * Devuelve { inserted, skipped, empty, errors:[{index,reason}] }.
+ */
+router.post('/bulk', async (req, res, next) => {
+  try {
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'No hay filas para guardar.' });
+    }
+
+    const existing = await loadExpenseKeys();
+    let inserted = 0;
+    let skipped = 0;
+    let empty = 0;
+    const errors = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i] || {};
+      try {
+        if (r.amount === '' || r.amount === null || r.amount === undefined) {
+          empty += 1;
+          continue;
+        }
+        const amount = Number(r.amount);
+        if (!Number.isFinite(amount) || amount < 0) {
+          errors.push({ index: i, reason: 'Importe inválido.' });
+          continue;
+        }
+        if (!r.expense_date) {
+          errors.push({ index: i, reason: 'Falta la fecha.' });
+          continue;
+        }
+        const unitId = await resolveUnitId(r);
+        const concept = r.concept ? String(r.concept).trim() : null;
+
+        const key = expenseKey({ expense_date: r.expense_date, business_unit_id: unitId, amount, concept });
+        if (existing.has(key)) {
+          skipped += 1;
+          continue;
+        }
+        await insertExpense({
+          business_unit_id: unitId,
+          category_id: r.category_id ? Number(r.category_id) : null,
+          expense_date: r.expense_date,
+          amount,
+          concept,
+          supplier: r.supplier ? String(r.supplier).trim() : null,
+          kind: r.kind || (unitId ? 'extraordinario' : 'general'),
+          note: r.note ? String(r.note).trim() : null,
+        });
+        existing.add(key);
+        inserted += 1;
+      } catch (e) {
+        errors.push({ index: i, reason: e.message || 'Error al guardar la fila.' });
+      }
+    }
+
+    res.json({ ok: true, inserted, skipped, empty, errors });
   } catch (err) {
     next(err);
   }

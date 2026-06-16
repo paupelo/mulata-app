@@ -8,8 +8,9 @@ import RecordList from '../components/RecordList';
 import EntryForm from '../components/EntryForm';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
-import Fab from '../components/Fab';
 import ExpenseBreakdown from '../components/charts/ExpenseBreakdown';
+import BulkSalesDays from '../components/BulkSalesDays';
+import BulkExpenses from '../components/BulkExpenses';
 
 /**
  * Página de una tienda física. Reutilizada por Megapolis y Casco Antiguo.
@@ -30,6 +31,7 @@ export default function StorePage({ unitCode, title, emoji }) {
   const [editing, setEditing] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [catModalOpen, setCatModalOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const load = useCallback(async () => {
     const range_qs = qs({ unit: unitCode, from: range.from, to: range.to });
@@ -115,6 +117,16 @@ export default function StorePage({ unitCode, title, emoji }) {
         ))}
       </div>
 
+      {/* Dos acciones diferenciadas: añadir uno / entrada rápida de varios */}
+      <div className="flex gap-2">
+        <button className="btn-primary flex-1" onClick={openCreate}>
+          ＋ {tab === 'ventas' ? 'Añadir venta' : 'Añadir gasto'}
+        </button>
+        <button className="btn-ghost flex-1" onClick={() => setBulkOpen(true)}>
+          ⊞ {tab === 'ventas' ? 'Añadir varias' : 'Añadir varios'}
+        </button>
+      </div>
+
       {tab === 'ventas' ? (
         <RecordList
           records={sales}
@@ -125,8 +137,7 @@ export default function StorePage({ unitCode, title, emoji }) {
         />
       ) : (
         <>
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-ink/60">Gastos del periodo</p>
+          <div className="flex justify-end">
             <button className="btn-ghost text-sm py-1.5" onClick={() => setCatModalOpen(true)}>
               ＋ Conceptos
             </button>
@@ -141,8 +152,6 @@ export default function StorePage({ unitCode, title, emoji }) {
           {breakdown.length > 0 && <ExpenseBreakdown data={breakdown} />}
         </>
       )}
-
-      <Fab onClick={openCreate} label={tab === 'ventas' ? 'Venta' : 'Gasto'} />
 
       {/* Modal de alta/edición */}
       <Modal
@@ -159,6 +168,24 @@ export default function StorePage({ unitCode, title, emoji }) {
           onSubmit={handleSubmit}
           onCancel={() => setFormOpen(false)}
         />
+      </Modal>
+
+      {/* Entrada rápida de varios registros */}
+      <Modal
+        open={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        title={`Añadir ${tab === 'ventas' ? 'varias ventas' : 'varios gastos'} · ${title}`}
+      >
+        {tab === 'ventas' ? (
+          <BulkSalesDays unitCode={unitCode} onClose={() => setBulkOpen(false)} onSaved={load} />
+        ) : (
+          <BulkExpenses
+            context={{ unitCode }}
+            categories={categories}
+            onClose={() => setBulkOpen(false)}
+            onSaved={load}
+          />
+        )}
       </Modal>
 
       {/* Gestión de conceptos de gasto */}

@@ -8,8 +8,8 @@ import RecordList from '../components/RecordList';
 import EntryForm from '../components/EntryForm';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
-import Fab from '../components/Fab';
 import ExpenseBreakdown from '../components/charts/ExpenseBreakdown';
+import BulkExpenses from '../components/BulkExpenses';
 
 export default function GeneralExpenses() {
   const [preset, setPreset] = useState('this-month');
@@ -22,6 +22,7 @@ export default function GeneralExpenses() {
   const [editing, setEditing] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [catModalOpen, setCatModalOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const total = expenses.reduce((s, e) => s + e.amount, 0);
 
@@ -66,8 +67,23 @@ export default function GeneralExpenses() {
         <KpiCard label="Total gastos generales del periodo" value={total} accent />
       </div>
 
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-ink/60">Registros del periodo</p>
+      {/* Dos acciones diferenciadas: un gasto / entrada rápida de varios */}
+      <div className="flex gap-2">
+        <button
+          className="btn-primary flex-1"
+          onClick={() => {
+            setEditing(null);
+            setFormOpen(true);
+          }}
+        >
+          ＋ Añadir gasto
+        </button>
+        <button className="btn-ghost flex-1" onClick={() => setBulkOpen(true)}>
+          ⊞ Añadir varios
+        </button>
+      </div>
+
+      <div className="flex justify-end">
         <button className="btn-ghost text-sm py-1.5" onClick={() => setCatModalOpen(true)}>
           ＋ Conceptos
         </button>
@@ -86,13 +102,15 @@ export default function GeneralExpenses() {
 
       {breakdown.length > 0 && <ExpenseBreakdown data={breakdown} />}
 
-      <Fab
-        onClick={() => {
-          setEditing(null);
-          setFormOpen(true);
-        }}
-        label="Gasto"
-      />
+      {/* Entrada rápida: varios gastos generales a la vez */}
+      <Modal open={bulkOpen} onClose={() => setBulkOpen(false)} title="Añadir varios gastos generales">
+        <BulkExpenses
+          context={{ general: true }}
+          categories={categories}
+          onClose={() => setBulkOpen(false)}
+          onSaved={load}
+        />
+      </Modal>
 
       <Modal open={formOpen} onClose={() => setFormOpen(false)} title={`${editing ? 'Editar' : 'Nuevo'} gasto general`}>
         <EntryForm
