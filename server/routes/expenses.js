@@ -2,6 +2,7 @@
 
 const express = require('express');
 const { query } = require('../db');
+const { insertExpense } = require('../repository');
 
 const router = express.Router();
 
@@ -71,21 +72,17 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: 'Faltan campos: fecha e importe son obligatorios.' });
     }
 
-    const { rows } = await query(
-      `INSERT INTO expenses (business_unit_id, category_id, expense_date, amount, concept, supplier, kind, note)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id;`,
-      [
-        unitId,
-        category_id || null,
-        expense_date,
-        amount,
-        concept || null,
-        supplier || null,
-        kind || (unitId ? 'extraordinario' : 'general'),
-        note || null,
-      ]
-    );
-    res.status(201).json({ id: rows[0].id });
+    const id = await insertExpense({
+      business_unit_id: unitId,
+      category_id: category_id || null,
+      expense_date,
+      amount,
+      concept: concept || null,
+      supplier: supplier || null,
+      kind: kind || (unitId ? 'extraordinario' : 'general'),
+      note: note || null,
+    });
+    res.status(201).json({ id });
   } catch (err) {
     next(err);
   }

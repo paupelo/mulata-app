@@ -2,6 +2,7 @@
 
 const express = require('express');
 const { query } = require('../db');
+const { insertSale } = require('../repository');
 
 const router = express.Router();
 
@@ -62,12 +63,14 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: 'Faltan campos: unidad, fecha e importe son obligatorios.' });
     }
 
-    const { rows } = await query(
-      `INSERT INTO sales (business_unit_id, client_id, sale_date, amount, note)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id;`,
-      [unitId, client_id || null, sale_date, amount, note || null]
-    );
-    res.status(201).json({ id: rows[0].id });
+    const id = await insertSale({
+      business_unit_id: unitId,
+      client_id: client_id || null,
+      sale_date,
+      amount,
+      note: note || null,
+    });
+    res.status(201).json({ id });
   } catch (err) {
     next(err);
   }
