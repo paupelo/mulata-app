@@ -1,0 +1,33 @@
+# Blueprint de Render para Mulata App.
+# Crea un Web Service (Node) + una base de datos PostgreSQL gestionada.
+# Más detalle paso a paso en DEPLOY.md.
+
+databases:
+  - name: mulata-db
+    databaseName: mulata
+    user: mulata
+    plan: free
+
+services:
+  - type: web
+    name: mulata-app
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mulata-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AUTH_USERNAME
+        sync: false
+      - key: AUTH_PASSWORD
+        sync: false
+      - key: NODE_ENV
+        value: production

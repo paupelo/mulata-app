@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+client/node_modules/
+
+# Build del cliente
+client/dist/
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# Backups generados
+backups/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/

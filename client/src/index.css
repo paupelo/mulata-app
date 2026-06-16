@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+    /* Respeta el notch en iPhone */
+    padding-top: env(safe-area-inset-top);
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl2 shadow-card p-4 sm:p-5;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 font-medium
+           transition-all duration-200 active:scale-95 select-none;
+  }
+  .btn-primary {
+    @apply btn bg-mulata-600 text-white shadow-soft hover:bg-mulata-700;
+  }
+  .btn-ghost {
+    @apply btn bg-mulata-50 text-mulata-700 hover:bg-mulata-100;
+  }
+  .btn-danger {
+    @apply btn bg-red-50 text-red-600 hover:bg-red-100;
+  }
+  .input {
+    @apply w-full rounded-2xl border border-mulata-100 bg-white px-4 py-3 text-base
+           outline-none transition focus:border-mulata-400 focus:ring-2 focus:ring-mulata-200;
+  }
+  .label {
+    @apply block text-sm font-medium text-ink/70 mb-1.5;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-medium;
+  }
+}
+
+/* Scrollbar discreto */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-mulata-200 rounded-full;
+}
