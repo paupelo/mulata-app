@@ -127,6 +127,14 @@ async function migrate() {
     );
   `);
 
+  // Cliente de distribución al que se imputa la asignación (solo aplica cuando
+  // unidad = 'distribucion'). Columna añadida de forma idempotente sin tocar
+  // datos existentes.
+  await query(`
+    ALTER TABLE asignaciones_compra
+    ADD COLUMN IF NOT EXISTS cliente_id INTEGER REFERENCES distribution_clients(id) ON DELETE SET NULL;
+  `);
+
   // Índices para acelerar las agregaciones del dashboard.
   await query(`CREATE INDEX IF NOT EXISTS idx_sales_date ON sales (sale_date);`);
   await query(`CREATE INDEX IF NOT EXISTS idx_sales_unit ON sales (business_unit_id);`);

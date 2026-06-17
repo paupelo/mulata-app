@@ -21,17 +21,20 @@ export default function Proveedores() {
 
   const [compras, setCompras] = useState([]);
   const [proveedores, setProveedores] = useState([]);
+  const [clientes, setClientes] = useState([]);
   const [resumen, setResumen] = useState(null);
 
   const load = useCallback(async () => {
     const r = qs({ desde: range.from, hasta: range.to });
-    const [cps, prov, res] = await Promise.all([
+    const [cps, prov, cli, res] = await Promise.all([
       api.get(`/compras${r}`),
       api.get('/proveedores'),
+      api.get('/clients'),
       api.get(`/proveedores/resumen${r}`),
     ]);
     setCompras(cps);
     setProveedores(prov);
+    setClientes(cli);
     setResumen(res);
   }, [range.from, range.to]);
 
@@ -68,6 +71,7 @@ export default function Proveedores() {
         <ComprasTab
           compras={compras}
           proveedores={proveedores}
+          clientes={clientes}
           resumen={resumen}
           preset={preset}
           range={range}
@@ -87,7 +91,7 @@ export default function Proveedores() {
 /* ──────────────────────────────────────────────────────────────────────────
  * Pestaña COMPRAS
  * ────────────────────────────────────────────────────────────────────────── */
-function ComprasTab({ compras, proveedores, resumen, preset, range, onRangeChange, onChanged }) {
+function ComprasTab({ compras, proveedores, clientes, resumen, preset, range, onRangeChange, onChanged }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -133,6 +137,7 @@ function ComprasTab({ compras, proveedores, resumen, preset, range, onRangeChang
             <CompraItem
               key={c.id}
               compra={c}
+              clientes={clientes}
               expanded={expandedId === c.id}
               onToggle={() => setExpandedId(expandedId === c.id ? null : c.id)}
               onEdit={() => {
@@ -183,7 +188,7 @@ function ComprasTab({ compras, proveedores, resumen, preset, range, onRangeChang
 }
 
 /** Fila de compra expandible con asignaciones. */
-function CompraItem({ compra, expanded, onToggle, onEdit, onDelete, onChanged }) {
+function CompraItem({ compra, clientes, expanded, onToggle, onEdit, onDelete, onChanged }) {
   const [detail, setDetail] = useState(null);
   const [asignarOpen, setAsignarOpen] = useState(false);
   const [confirmAsig, setConfirmAsig] = useState(null);
@@ -251,7 +256,10 @@ function CompraItem({ compra, expanded, onToggle, onEdit, onDelete, onChanged })
                   className="flex items-center gap-2 rounded-2xl bg-mulata-50 px-3 py-2 text-sm"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium">{UNIDAD_LABEL[a.unidad] || a.unidad}</p>
+                    <p className="font-medium truncate">
+                      {UNIDAD_LABEL[a.unidad] || a.unidad}
+                      {a.cliente_nombre ? ` · ${a.cliente_nombre}` : ''}
+                    </p>
                     <p className="text-[11px] text-ink/50 truncate">
                       {formatDate(a.fecha)}
                       {a.unidades_tomadas ? ` · ${a.unidades_tomadas} ud.` : ''}
@@ -283,6 +291,7 @@ function CompraItem({ compra, expanded, onToggle, onEdit, onDelete, onChanged })
       <Modal open={asignarOpen} onClose={() => setAsignarOpen(false)} title="Asignar a unidad">
         <AsignarForm
           compra={compra}
+          clientes={clientes}
           onCancel={() => setAsignarOpen(false)}
           onSaved={async () => {
             setAsignarOpen(false);
@@ -436,7 +445,7 @@ function CompraForm({ proveedores, initial, onCancel, onSaved }) {
 }
 
 /** Formulario para imputar parte de una compra a una unidad. */
-function AsignarForm({ compra, onCancel, onSaved }) {
+function AsignarForm({ compra, clientes = [], onCancel, onSaved }) {
   const pendienteImporte = Math.max(0, compra.importe_total - compra.importe_asignado);
   const pendienteUnidades =
     compra.cantidad_unidades != null
@@ -449,6 +458,7 @@ function AsignarForm({ compra, onCancel, onSaved }) {
       : null;
 
   const [unidad, setUnidad] = useState('megapolis');
+  const [clienteId, setClienteId] = useState('');
   const [unidadesTomadas, setUnidadesTomadas] = useState('');
   const [importe, setImporte] = useState('');
   const [importeTocado, setImporteTocado] = useState(false);
@@ -470,9 +480,11 @@ function AsignarForm({ compra, onCancel, onSaved }) {
     e.preventDefault();
     setError('');
     if (importe === '' || Number(importe) < 0) return setError('Introduce un importe asignado válido.');
+    if (unidad === 'distribucion' && !clienteId) return setError('Elige un cliente de distribución.');
 
     const payload = {
       unidad,
+      cliente_id: unidad === 'distribucion' && clienteId ? Number(clienteId) : null,
       unidades_tomadas: unidadesTomadas === '' ? null : Number(unidadesTomadas),
       importe_asignado: Number(importe),
       fecha,
@@ -522,6 +534,26 @@ function AsignarForm({ compra, onCancel, onSaved }) {
           ))}
         </div>
       </div>
+
+      {/* Cliente de distribución: obligatorio cuando la unidad es distribución */}
+      {unidad === 'distribucion' && (
+        <div>
+          <label className="label">Cliente de distribución</label>
+          <select className="input" value={clienteId} onChange={(e) => setClienteId(e.target.value)}>
+            <option value="">Selecciona…</option>
+            {clientes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          {clientes.length === 0 && (
+            <p className="text-xs text-amber-600 mt-1">
+              No hay clientes de distribución. Crea uno primero en la sección Distribución.
+            </p>
+          )}
+        </div>
+      )}
 
       {compra.cantidad_unidades != null && (
         <div>

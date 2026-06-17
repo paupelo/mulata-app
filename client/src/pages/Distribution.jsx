@@ -24,6 +24,7 @@ export default function Distribution() {
   const [editingClient, setEditingClient] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [clientsOpen, setClientsOpen] = useState(false); // clientes plegados por defecto
 
   const load = useCallback(async () => {
     const r = qs({ unit: 'distribucion', from: range.from, to: range.to });
@@ -82,9 +83,18 @@ export default function Distribution() {
         </div>
       )}
 
-      {/* Clientes de distribución */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg text-mulata-800">Clientes</h2>
+      {/* Clientes de distribución (plegable: ocultos por defecto para dejar
+          los movimientos más arriba). Ordenados por volumen total facturado. */}
+      <div className="flex items-center justify-between gap-2">
+        <button
+          className="flex items-center gap-2 text-lg text-mulata-800"
+          onClick={() => setClientsOpen((v) => !v)}
+          aria-expanded={clientsOpen}
+        >
+          <span className={`text-sm text-ink/40 transition-transform ${clientsOpen ? 'rotate-90' : ''}`}>▶</span>
+          Clientes
+          <span className="text-sm text-ink/40">({clients.length})</span>
+        </button>
         <button
           className="btn-ghost text-sm py-1.5"
           onClick={() => {
@@ -96,32 +106,33 @@ export default function Distribution() {
         </button>
       </div>
 
-      {clients.length === 0 ? (
-        <div className="card text-center text-ink/50 py-8">Aún no hay clientes de distribución.</div>
-      ) : (
-        <ul className="grid sm:grid-cols-2 gap-3">
-          {clients.map((c) => (
-            <li key={c.id} className="card flex items-center justify-between">
-              <div className="min-w-0">
-                <p className="font-medium truncate">{c.name}</p>
-                <p className="text-xs text-ink/50 truncate">
-                  {c.contact || 'Sin contacto'} · Total: {money(c.total_billed)}
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setEditingClient(c);
-                  setClientModal(true);
-                }}
-                className="h-8 w-8 grid place-items-center rounded-full bg-mulata-50 text-mulata-700"
-                aria-label="Editar cliente"
-              >
-                ✎
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {clientsOpen &&
+        (clients.length === 0 ? (
+          <div className="card text-center text-ink/50 py-8">Aún no hay clientes de distribución.</div>
+        ) : (
+          <ul className="grid sm:grid-cols-2 gap-3 animate-fade-in">
+            {clients.map((c) => (
+              <li key={c.id} className="card flex items-center justify-between">
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{c.name}</p>
+                  <p className="text-xs text-ink/50 truncate">
+                    {c.contact || 'Sin contacto'} · Total: {money(c.total_billed)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingClient(c);
+                    setClientModal(true);
+                  }}
+                  className="h-8 w-8 grid place-items-center rounded-full bg-mulata-50 text-mulata-700"
+                  aria-label="Editar cliente"
+                >
+                  ✎
+                </button>
+              </li>
+            ))}
+          </ul>
+        ))}
 
       {/* Facturación registrada */}
       <h2 className="text-lg text-mulata-800 pt-2">Facturación registrada</h2>

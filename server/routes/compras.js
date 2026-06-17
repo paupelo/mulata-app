@@ -70,11 +70,13 @@ router.get('/:id', async (req, res, next) => {
     if (rows.length === 0) return res.status(404).json({ error: 'Compra no encontrada.' });
     const compra = rows[0];
     const { rows: asignaciones } = await query(
-      `SELECT id, compra_id, unidad, unidades_tomadas,
-              importe_asignado::float8 AS importe_asignado, fecha, nota, created_at
-       FROM asignaciones_compra
-       WHERE compra_id = $1
-       ORDER BY fecha ASC, id ASC;`,
+      `SELECT a.id, a.compra_id, a.unidad, a.unidades_tomadas,
+              a.importe_asignado::float8 AS importe_asignado, a.fecha, a.nota,
+              a.cliente_id, dc.name AS cliente_nombre, a.created_at
+       FROM asignaciones_compra a
+       LEFT JOIN distribution_clients dc ON dc.id = a.cliente_id
+       WHERE a.compra_id = $1
+       ORDER BY a.fecha ASC, a.id ASC;`,
       [req.params.id]
     );
     res.json({ ...compra, asignaciones });
@@ -168,7 +170,7 @@ router.delete('/:id', async (req, res, next) => {
  */
 router.post('/:id/asignaciones', async (req, res, next) => {
   try {
-    const { unidad, unidades_tomadas, importe_asignado, fecha, nota } = req.body || {};
+    const { unidad, unidades_tomadas, importe_asignado, fecha, nota, cliente_id } = req.body || {};
     if (!unidad || !UNIDADES.includes(unidad)) {
       return res.status(400).json({ error: 'Unidad inválida. Debe ser megapolis, casco o distribucion.' });
     }
@@ -179,6 +181,10 @@ router.post('/:id/asignaciones', async (req, res, next) => {
     if (!Number.isFinite(importe) || importe < 0) {
       return res.status(400).json({ error: 'Importe asignado inválido.' });
     }
+    // En distribución es obligatorio imputar la compra a un cliente existente.
+    if (unidad === 'distribucion' && !cliente_id) {
+      return res.status(400).json({ error: 'Para distribución debes elegir un cliente de distribución.' });
+    }
 
     // La compra debe existir; tomamos su fecha como default.
     const { rows: compraRows } = await query(
@@ -188,8 +194,8 @@ router.post('/:id/asignaciones', async (req, res, next) => {
     if (compraRows.length === 0) return res.status(404).json({ error: 'Compra no encontrada.' });
 
     const { rows } = await query(
-      `INSERT INTO asignaciones_compra (compra_id, unidad, unidades_tomadas, importe_asignado, fecha, nota)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id;`,
+      `INSERT INTO asignaciones_compra (compra_id, unidad, unidades_tomadas, importe_asignado, fecha, nota, cliente_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id;`,
       [
         Number(req.params.id),
         unidad,
@@ -197,6 +203,7 @@ router.post('/:id/asignaciones', async (req, res, next) => {
         importe,
         fecha || compraRows[0].fecha,
         nota ? String(nota).trim() : null,
+        unidad === 'distribucion' && cliente_id ? Number(cliente_id) : null,
       ]
     );
     res.status(201).json({ id: rows[0].id });

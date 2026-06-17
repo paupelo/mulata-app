@@ -17,7 +17,7 @@ router.get('/', async (req, res, next) => {
       FROM distribution_clients dc
       LEFT JOIN sales s ON s.client_id = dc.id
       GROUP BY dc.id
-      ORDER BY dc.name ASC;
+      ORDER BY total_billed DESC, dc.name ASC;
     `);
     res.json(rows);
   } catch (err) {
