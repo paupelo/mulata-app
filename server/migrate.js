@@ -17,6 +17,9 @@ const DEFAULT_FIXED_CATEGORIES = ['Salario', 'Alquiler', 'Naturgy (luz)', 'Wifi 
 // Conceptos de gastos generales / comunes (business_unit_id = NULL).
 const DEFAULT_GENERAL_CATEGORIES = ['Compra a proveedor', 'Honorarios contadora', 'Tasas e impuestos sociedad'];
 
+// Proveedores por defecto sembrados al arrancar (idempotente, no duplica).
+const DEFAULT_PROVEEDORES = ['Anisa', 'Benli', 'Lentes', 'Bisutería', 'Taller Mulata', 'Valeria'];
+
 /**
  * Crea todas las tablas si no existen (idempotente) y siembra los datos base.
  */
@@ -85,6 +88,45 @@ async function migrate() {
     );
   `);
 
+  // ── Módulo Proveedores ──────────────────────────────────────────────
+  // Tablas independientes de ventas/gastos. Las compras a proveedor se
+  // registran aquí y luego se reparten ("imputan") a las unidades de negocio
+  // mediante asignaciones. Esto NO altera las tablas sales/expenses.
+  await query(`
+    CREATE TABLE IF NOT EXISTS proveedores (
+      id         SERIAL PRIMARY KEY,
+      nombre     TEXT NOT NULL UNIQUE,
+      activo     BOOLEAN DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS compras_proveedor (
+      id                SERIAL PRIMARY KEY,
+      proveedor_id      INTEGER REFERENCES proveedores(id),
+      fecha             DATE NOT NULL,
+      concepto          TEXT NOT NULL,
+      cantidad_unidades INTEGER,
+      importe_total     NUMERIC(10,2) NOT NULL,
+      nota              TEXT,
+      created_at        TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS asignaciones_compra (
+      id                SERIAL PRIMARY KEY,
+      compra_id         INTEGER REFERENCES compras_proveedor(id) ON DELETE CASCADE,
+      unidad            TEXT NOT NULL CHECK (unidad IN ('megapolis','casco','distribucion')),
+      unidades_tomadas  INTEGER,
+      importe_asignado  NUMERIC(10,2) NOT NULL,
+      fecha             DATE NOT NULL,
+      nota              TEXT,
+      created_at        TIMESTAMPTZ DEFAULT NOW()
+    );
+  `);
+
   // Índices para acelerar las agregaciones del dashboard.
   await query(`CREATE INDEX IF NOT EXISTS idx_sales_date ON sales (sale_date);`);
   await query(`CREATE INDEX IF NOT EXISTS idx_sales_unit ON sales (business_unit_id);`);
@@ -92,6 +134,11 @@ async function migrate() {
   await query(`CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses (expense_date);`);
   await query(`CREATE INDEX IF NOT EXISTS idx_expenses_unit ON expenses (business_unit_id);`);
   await query(`CREATE INDEX IF NOT EXISTS idx_expenses_cat ON expenses (category_id);`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_compras_fecha ON compras_proveedor (fecha);`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_compras_proveedor ON compras_proveedor (proveedor_id);`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_asignaciones_compra ON asignaciones_compra (compra_id);`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_asignaciones_unidad ON asignaciones_compra (unidad);`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_asignaciones_fecha ON asignaciones_compra (fecha);`);
 
   await seed();
   console.log('[Mulata] Migración y seed completados.');
@@ -124,6 +171,14 @@ async function seed() {
   // Categorías de gastos generales (sin unidad).
   for (const name of DEFAULT_GENERAL_CATEGORIES) {
     await ensureCategory(name, null, 'general');
+  }
+
+  // Proveedores por defecto (no duplica si ya existen).
+  for (const nombre of DEFAULT_PROVEEDORES) {
+    await query(
+      `INSERT INTO proveedores (nombre) VALUES ($1) ON CONFLICT (nombre) DO NOTHING;`,
+      [nombre]
+    );
   }
 
   // Usuario admin a partir de las variables de entorno (login principal).

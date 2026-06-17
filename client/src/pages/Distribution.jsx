@@ -16,6 +16,7 @@ export default function Distribution() {
   const [summary, setSummary] = useState(null);
   const [clients, setClients] = useState([]);
   const [sales, setSales] = useState([]);
+  const [imputado, setImputado] = useState(0);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
@@ -26,14 +27,16 @@ export default function Distribution() {
 
   const load = useCallback(async () => {
     const r = qs({ unit: 'distribucion', from: range.from, to: range.to });
-    const [sum, cl, sl] = await Promise.all([
+    const [sum, cl, sl, resumen] = await Promise.all([
       api.get(`/analytics/summary${qs({ unit: 'distribucion', from: range.from, to: range.to })}`),
       api.get('/clients'),
       api.get(`/sales${r}`),
+      api.get(`/proveedores/resumen${qs({ desde: range.from, hasta: range.to })}`),
     ]);
     setSummary(sum);
     setClients(cl);
     setSales(sl);
+    setImputado(resumen?.unidades?.distribucion || 0);
   }, [range.from, range.to]);
 
   useEffect(() => {
@@ -65,6 +68,17 @@ export default function Distribution() {
         <div className="grid grid-cols-2 gap-3">
           <KpiCard label="Facturado" value={summary.sales.value} variation={summary.sales.variation} />
           <KpiCard label="Beneficio" value={summary.profit.value} variation={summary.profit.variation} accent />
+        </div>
+      )}
+
+      {/* Gastos imputados de proveedores (reparto de compras hacia distribución) */}
+      {imputado > 0 && (
+        <div className="card bg-mulata-50/60 flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-ink/80">🚚 Gastos imputados de proveedores</p>
+            <p className="text-xs text-ink/50">Compras repartidas a distribución en el periodo</p>
+          </div>
+          <p className="font-semibold tabular-nums text-mulata-700">{money(imputado)}</p>
         </div>
       )}
 

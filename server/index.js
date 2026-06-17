@@ -15,6 +15,9 @@ const clientsRouter = require('./routes/clients');
 const analyticsRouter = require('./routes/analytics');
 const { router: dataRouter } = require('./routes/data');
 const importRouter = require('./routes/import');
+const { router: proveedoresRouter } = require('./routes/proveedores');
+const comprasRouter = require('./routes/compras');
+const asignacionesRouter = require('./routes/asignaciones');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +39,9 @@ app.use('/api/clients', requireAuth, clientsRouter);
 app.use('/api/analytics', requireAuth, analyticsRouter);
 app.use('/api/data', requireAuth, dataRouter);
 app.use('/api/import', requireAuth, importRouter);
+app.use('/api/proveedores', requireAuth, proveedoresRouter);
+app.use('/api/compras', requireAuth, comprasRouter);
+app.use('/api/asignaciones', requireAuth, asignacionesRouter);
 
 // Unidades de negocio (lista fija; útil para los selectores del cliente).
 const { query } = require('./db');

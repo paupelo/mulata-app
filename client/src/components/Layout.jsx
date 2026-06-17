@@ -7,8 +7,8 @@ const NAV = [
   { to: '/megapolis', label: 'Tienda Megapolis', icon: '🏬' },
   { to: '/casco', label: 'Tienda Casco Antiguo', icon: '🏛️' },
   { to: '/distribucion', label: 'Distribución', icon: '📦' },
+  { to: '/proveedores', label: 'Proveedores', icon: '🚚' },
   { to: '/gastos-generales', label: 'Gastos Generales', icon: '🧾' },
-  { to: '/analitica', label: 'Analítica', icon: '📈' },
   { to: '/ajustes', label: 'Ajustes', icon: '⚙️' },
 ];
 

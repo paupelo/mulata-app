@@ -25,6 +25,7 @@ export default function StorePage({ unitCode, title, emoji }) {
   const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [breakdown, setBreakdown] = useState([]);
+  const [imputado, setImputado] = useState(0);
 
   // Estado de modales
   const [formOpen, setFormOpen] = useState(false);
@@ -35,18 +36,20 @@ export default function StorePage({ unitCode, title, emoji }) {
 
   const load = useCallback(async () => {
     const range_qs = qs({ unit: unitCode, from: range.from, to: range.to });
-    const [sum, sl, ex, cats, bd] = await Promise.all([
+    const [sum, sl, ex, cats, bd, resumen] = await Promise.all([
       api.get(`/analytics/summary${qs({ unit: unitCode, from: range.from, to: range.to })}`),
       api.get(`/sales${range_qs}`),
       api.get(`/expenses${range_qs}`),
       api.get(`/categories${qs({ unit: unitCode })}`),
       api.get(`/analytics/expense-breakdown${range_qs}`),
+      api.get(`/proveedores/resumen${qs({ desde: range.from, hasta: range.to })}`),
     ]);
     setSummary(sum);
     setSales(sl);
     setExpenses(ex);
     setCategories(cats);
     setBreakdown(bd);
+    setImputado(resumen?.unidades?.[unitCode] || 0);
   }, [unitCode, range.from, range.to]);
 
   useEffect(() => {
@@ -96,6 +99,17 @@ export default function StorePage({ unitCode, title, emoji }) {
           <KpiCard label="Gastos" value={summary.expenses.value} variation={summary.expenses.variation} />
           <KpiCard label="Beneficio" value={summary.profit.value} variation={summary.profit.variation} accent />
           <KpiCard label="Margen" value={summary.margin.value} variationPoints={summary.margin.variationPoints} format="percent" />
+        </div>
+      )}
+
+      {/* Gastos imputados de proveedores (reparto de compras hacia esta tienda) */}
+      {imputado > 0 && (
+        <div className="card bg-mulata-50/60 flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-ink/80">🚚 Gastos imputados de proveedores</p>
+            <p className="text-xs text-ink/50">Compras repartidas a esta tienda en el periodo</p>
+          </div>
+          <p className="font-semibold tabular-nums text-mulata-700">{money(imputado)}</p>
         </div>
       )}
 

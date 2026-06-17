@@ -7,6 +7,7 @@ import StorePage from './pages/StorePage';
 import Distribution from './pages/Distribution';
 import GeneralExpenses from './pages/GeneralExpenses';
 import Analytics from './pages/Analytics';
+import Proveedores from './pages/Proveedores';
 import Settings from './pages/Settings';
 
 function Gate() {
@@ -30,6 +31,7 @@ function Gate() {
         <Route path="casco" element={<StorePage unitCode="casco" title="Tienda Casco Antiguo" emoji="🏛️" />} />
         <Route path="distribucion" element={<Distribution />} />
         <Route path="gastos-generales" element={<GeneralExpenses />} />
+        <Route path="proveedores" element={<Proveedores />} />
         <Route path="analitica" element={<Analytics />} />
         <Route path="ajustes" element={<Settings />} />
         <Route path="*" element={<Dashboard />} />

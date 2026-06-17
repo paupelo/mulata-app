@@ -5,7 +5,7 @@ const ITEMS = [
   { to: '/megapolis', label: 'Megapolis', icon: '🏬' },
   { to: '/casco', label: 'Casco', icon: '🏛️' },
   { to: '/distribucion', label: 'Distrib.', icon: '📦' },
-  { to: '/analitica', label: 'Analítica', icon: '📈' },
+  { to: '/proveedores', label: 'Proveedores', icon: '🚚' },
 ];
 
 // Navegación inferior fija para móvil.
