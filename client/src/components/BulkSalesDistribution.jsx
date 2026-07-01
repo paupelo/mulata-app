@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { api } from '../api';
+import { currentMonthPanama } from '../lib/format';
 import BulkResult from './BulkResult';
 
 function currentMonth() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return currentMonthPanama();
 }
 function monthLabel(m) {
   if (!m) return '';

@@ -44,7 +44,26 @@ export function percent(n) {
   return (Number(n) || 0).toFixed(1) + '%';
 }
 
-// Fecha de hoy en formato YYYY-MM-DD (para inputs date).
+// Fecha de hoy en hora de Panamá (UTC-5, sin horario de verano), en formato
+// YYYY-MM-DD (para inputs date). Usamos la zona horaria de Panamá en vez de
+// UTC/hora del servidor para que, al registrar ventas tras el cierre (8pm),
+// la fecha por defecto siga siendo el día actual y no el siguiente.
+// 'en-CA' produce directamente el formato 'YYYY-MM-DD'.
+export function getLocalDatePanama() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Panama' });
+}
+
+// Alias histórico usado por los formularios.
 export function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return getLocalDatePanama();
+}
+
+// Primer día del mes actual en hora de Panamá, formato 'YYYY-MM-DD'.
+export function firstOfMonthPanama() {
+  return getLocalDatePanama().slice(0, 7) + '-01';
+}
+
+// Mes actual en hora de Panamá, formato 'YYYY-MM'.
+export function currentMonthPanama() {
+  return getLocalDatePanama().slice(0, 7);
 }

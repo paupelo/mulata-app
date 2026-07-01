@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api, qs } from '../api';
 import { getRange } from '../lib/dateRanges';
-import { money } from '../lib/format';
+import { money, firstOfMonthPanama } from '../lib/format';
 import DateRangePicker from '../components/DateRangePicker';
 import KpiCard from '../components/KpiCard';
 import RecordList from '../components/RecordList';
@@ -242,8 +242,7 @@ export default function Distribution() {
 }
 
 function monthStart() {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
+  return firstOfMonthPanama();
 }
 
 /** Modal para crear/editar un cliente de distribución. */

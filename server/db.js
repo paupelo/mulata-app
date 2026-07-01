@@ -29,6 +29,17 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
 });
 
+// Fija la zona horaria de sesión a Panamá (UTC-5, sin horario de verano) en
+// cada conexión nueva del pool. Así cualquier CURRENT_DATE / now()::date se
+// evalúa en hora panameña. No afecta a los datos históricos: las columnas DATE
+// se leen como texto crudo (ver setTypeParser arriba) y los TIMESTAMPTZ guardan
+// instantes absolutos; solo cambia la interpretación de sesión.
+pool.on('connect', (client) => {
+  client.query("SET TIME ZONE 'America/Panama'").catch((err) => {
+    console.error('[Mulata] No se pudo fijar la zona horaria de la sesión:', err.message);
+  });
+});
+
 pool.on('error', (err) => {
   console.error('[Mulata] Error inesperado en el pool de PostgreSQL:', err.message);
 });

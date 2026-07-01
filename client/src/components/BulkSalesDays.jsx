@@ -1,11 +1,10 @@
 import { useMemo, useRef, useState } from 'react';
 import { api } from '../api';
-import { todayISO } from '../lib/format';
+import { todayISO, firstOfMonthPanama } from '../lib/format';
 import BulkResult from './BulkResult';
 
 function firstOfMonthISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  return firstOfMonthPanama();
 }
 function fmtISO(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
